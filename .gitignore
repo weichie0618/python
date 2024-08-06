@@ -1,0 +1,54 @@
+import pyautogui
+import cv2
+import time
+import keyboard
+
+# 設置兩個位置的變數及其模板圖像路徑
+position1 = (20, 1050, r'D:\window.png')
+position2 = (100, 100, r'D:\updata.png')
+
+def check_and_click(position):
+    initial_x, initial_y, template_image_path = position
+
+    # 移動到初始位置
+    pyautogui.moveTo(initial_x, initial_y)
+    time.sleep(1)  # 給一些時間來完成移動
+
+    # 截取指定位置周圍的小區域
+    region = (initial_x - 50, initial_y - 50, 100, 100)  # 以(initial_x, initial_y)為中心的100x100區域
+    screenshot = pyautogui.screenshot(region=region)
+    screenshot_path = r'D:\screenshot.png'
+    screenshot.save(screenshot_path)
+
+    # 使用OpenCV讀取圖像
+    template_image = cv2.imread(template_image_path, cv2.IMREAD_GRAYSCALE)
+    screenshot_image = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
+
+    # 使用OpenCV進行圖像匹配
+    result = cv2.matchTemplate(screenshot_image, template_image, cv2.TM_CCOEFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+    # 設置匹配置信度閾值
+    confidence_threshold = 0.9
+
+    if max_val >= confidence_threshold:
+        # 確定模板圖像存在於指定位置
+        print(f"Found the symbol at the specified location {position[:2]}.")
+        pyautogui.click()
+        return True
+    else:
+        print(f"Symbol not found at the specified location {position[:2]}.")
+        return False
+
+# 無限迴圈，按下空白鍵停止
+while True:
+    if check_and_click(position1):
+        check_and_click(position2)
+
+    # 檢查空白鍵是否被按下
+    if keyboard.is_pressed('space'):
+        print("Space key pressed. Exiting the loop.")
+        break
+
+    # 為了避免佔用過多的CPU資源，稍微休眠一段時間
+    time.sleep(0.1)
