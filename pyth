@@ -1,3 +1,7 @@
+# pip install opencv-python
+# pip install pyautogui pillow
+# pip install keyboard
+
 import keyboard
 import pyautogui
 import threading
