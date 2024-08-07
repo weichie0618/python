@@ -1,0 +1,77 @@
+import keyboard
+import pyautogui
+import threading
+import cv2
+import time
+
+# 设置两个位置的变量及其模板图像路径
+position1 = (20, 1050, r'D:\window.png')
+position2 = (20, 1050, r'D:\window.png')
+count = ""
+
+# 控制循环停止的标志
+stop_requested = False
+
+# 线程函数：监控空白键的按下
+def monitor_space_key():
+    global stop_requested
+    while not stop_requested:
+        if keyboard.is_pressed('space'):
+            print("Space key pressed, stopping the loop...")
+            stop_requested = True
+        time.sleep(0.1)  # 避免过度占用 CPU
+
+# 启动线程来监控空白键
+key_monitor_thread = threading.Thread(target=monitor_space_key, daemon=True)
+key_monitor_thread.start()
+
+def check_and_click(position):
+    initial_x, initial_y, template_image_path = position
+
+    # 移动到初始位置
+    pyautogui.moveTo(initial_x, initial_y)
+    time.sleep(1)  # 给一些时间来完成移动
+
+    # 截取指定位置周围的小区域
+    region = (initial_x - 50, initial_y - 50, 100, 100)  # 以(initial_x, initial_y)为中心的100x100区域
+    screenshot = pyautogui.screenshot(region=region)
+    screenshot_path = r'D:\screenshot.png'
+    screenshot.save(screenshot_path)
+
+    # 使用OpenCV读取图像
+    template_image = cv2.imread(template_image_path, cv2.IMREAD_GRAYSCALE)
+    screenshot_image = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
+
+    # 使用OpenCV进行图像匹配
+    result = cv2.matchTemplate(screenshot_image, template_image, cv2.TM_CCOEFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+    # 设置匹配置信度阈值
+    confidence_threshold = 0.9
+
+    if max_val >= confidence_threshold:
+        # 确定模板图像存在于指定位置
+        print("ok")
+        pyautogui.click()
+        return True
+    else:
+        print("false")
+        return False
+
+# 主程序逻辑
+try:
+    # 无限循环，按下空白键停止
+    while not stop_requested:
+        if check_and_click(position1):
+            position2 = (position2[0], position2[1] - 100, position2[2])
+            position1 = (position1[0], position1[1] - 20, position1[2])
+            print(position2)
+            check_and_click(position2)
+        else:
+            position1 = (20, 1050, r'D:\window.png')
+            position2 = (20, 1050, r'D:\window.png')
+
+        # 为了避免占用过多的CPU资源，稍微休眠一段时间
+        time.sleep(0.1)
+finally:
+    print("Exiting...")
